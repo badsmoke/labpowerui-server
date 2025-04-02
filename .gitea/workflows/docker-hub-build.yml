@@ -1,0 +1,67 @@
+name: Multi-Arch Docker Build and Push
+
+on:
+  push:
+    tags:
+      - "*"   
+  release:
+    types:
+      - created
+
+jobs:
+  docker:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Buildx
+        run: |
+          docker buildx inspect
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+
+      - name: Login to docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.DOCKER_REGISTRY }}
+          username: ${{ vars.DOCKER_REGISTRY_USERNAME }}
+          password: ${{ vars.DOCKER_REGISTRY_PASSWORD }}
+
+      - name: Login to docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.DOCKER_HUB_REGISTRY }}
+          username: ${{ vars.DOCKER_HUB_REGISTRY_USERNAME }}
+          password: ${{ vars.DOCKER_HUB_REGISTRY_PASSWORD }}
+          
+      - name: Get Version from Git Tag
+        run: echo "VERSION=${GITEA_REF#refs/tags/}" >> $GITEA_ENV
+
+
+      - name: Build & Push Multi-Arch Image
+        run: |
+          IMAGE_NAME=${{ vars.DOCKER_REGISTRY }}/${{ github.repository }}
+          COMMIT=${{ github.sha }}
+          echo "Repo: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 \
+            -t $IMAGE_NAME:latest \
+            -t $IMAGE_NAME:$COMMIT \
+            --push .
+
+      - name: Build & Push Multi-Arch Image to docker hub
+        run: |
+          IMAGE_NAME=${{ vars.DOCKER_HUB_REGISTRY }}/${{ github.repository }}
+          COMMIT=${{ github.sha }}
+          echo "Repo: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 \
+            -t $IMAGE_NAME:latest \
+            -t $IMAGE_NAME:$VERSION \
+            --push .

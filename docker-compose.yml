@@ -1,0 +1,30 @@
+version: "3"
+services:
+  power-supply-server:
+    image: badsmoke/labpowerui-server
+    ports:
+      - "1234:1234"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - USB_DEVICE=/dev/ttyUSB0
+      - STORAGE_TASK=true
+      - STORAGE_INTERVAL=1
+      - STORAGE_LIMIT=10000
+      - FAKE_VALUES=false
+      - LOGGING=false
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+
+  power-supply-ui:
+    image: badsmoke/labpowerui
+    ports:
+      - "80:80"

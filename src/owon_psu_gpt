@@ -1,0 +1,88 @@
+import serial
+import threading
+
+class OwonPSU:
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls, port="/dev/ttyUSB0", default_timeout=0.5):
+        """Singleton-Pattern: Erstellt nur eine Instanz"""
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:  # Doppelprüfung für Threadsicherheit
+                    cls._instance = super(OwonPSU, cls).__new__(cls)
+                    cls._instance._init_instance(port, default_timeout)
+        return cls._instance
+
+    def _init_instance(self, port, default_timeout):
+        """Initialisiert das Gerät einmalig"""
+        self.port = port
+        self.timeout = default_timeout
+        self.ser = None
+        self.device_lock = threading.Lock()  # Sperre für parallele Zugriffe
+        self.open()  # Automatisch öffnen
+
+    def open(self):
+        """Öffnet die serielle Verbindung, falls sie noch nicht offen ist"""
+        with self.device_lock:
+            if self.ser is None or not self.ser.is_open:
+                try:
+                    self.ser = serial.Serial(self.port, 115200, timeout=self.timeout)
+                    identity = self.read_identity()
+                    if "OWON" not in identity:
+                        raise Exception("Nicht unterstütztes Gerät!")
+                except Exception as e:
+                    self.ser = None
+                    print(f"Fehler beim Öffnen: {e}")
+
+    def close(self):
+        """Schließt die Verbindung sicher"""
+        with self.device_lock:
+            if self.ser and self.ser.is_open:
+                self.ser.close()
+                self.ser = None
+
+    def _cmd(self, command, accept_silent=False, timeout=None):
+        """Sendet einen Befehl und liest die Antwort"""
+        with self.device_lock:  # Threadsynchronisation
+            if self.ser is None:
+                self.open()  # Automatisch wieder verbinden
+                if self.ser is None:
+                    raise Exception("Fehler: Verbindung nicht verfügbar")
+
+            self.ser.write(bytes(command, 'utf-8') + b"\n")
+            self.ser.timeout = timeout if timeout is not None else self.timeout
+            ret = self.ser.readline().decode('utf-8')
+
+            if not ret.endswith("\r\n") and not accept_silent:
+                raise Exception(f"Keine Antwort auf Befehl: '{command}'!")
+            return ret.strip()
+
+    def read_identity(self):
+        return self._cmd("*IDN?")
+
+    def measure_voltage(self):
+        return float(self._cmd("MEASure:VOLTage?"))
+
+    def measure_current(self):
+        return float(self._cmd("MEASure:CURRent?"))
+
+    def get_voltage(self):
+        return float(self._cmd("VOLTage?"))
+
+    def get_current(self):
+        return float(self._cmd("CURRent?"))
+
+    def get_voltage_limit(self):
+        return float(self._cmd("VOLTage:LIMit?"))
+
+    def get_current_limit(self):
+        return float(self._cmd("CURRent:LIMit?"))
+
+    def get_output(self):
+        ret = self._cmd("OUTPut?")
+        return ret == "ON"
+
+    def set_output(self, enabled):
+        self._cmd(f"OUTPut {'ON' if enabled else 'OFF'}", accept_silent=True)
+

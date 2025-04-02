@@ -1,0 +1,308 @@
+openapi: 3.0.0
+info:
+  title: Power Supply API
+  description: API for managing power supply settings, retrieving values, and controlling storage.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:1234
+    description: Local development server
+  - url: http://localhost:1235
+    description: Local development server
+
+paths:
+  /api/get/fakevalues:
+    get:
+      summary: Retrieve fake power supply values
+      description: Returns a set of fake power supply values for testing purposes.
+      responses:
+        '200':
+          description: Successfully retrieved fake values
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PowerSupplyResponse'
+
+  /api/set/fake:
+    post:
+      summary: Set fake power supply values
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fake:
+                  type: boolean
+                  example: true
+      responses:
+        "200":
+          description: Successfully set fake values
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+
+  /api/get/values:
+    get:
+      summary: Retrieve actual power supply values
+      responses:
+        "200":
+          description: Successfully retrieved values
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PowerSupplyResponse'
+
+  /api/set/output:
+    post:
+      summary: Set power output values
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                output:
+                  type: boolean
+                  example: true
+      responses:
+        "200":
+          description: Successfully set output values
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PowerSupplyResponse'
+
+  /api/storage/task:
+    post:
+      summary: Enable or disable data storage
+      description: Starts or stops storing power supply data in Redis.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                task:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Successfully updated storage task setting
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+
+  /api/storage/interval:
+    post:
+      summary: Set the data storage interval
+      description: Adjusts how often power supply data is stored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                interval:
+                  type: number
+                  example: 5
+      responses:
+        '200':
+          description: Successfully updated storage interval
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+
+  /api/storage/limit:
+    post:
+      summary: Set the data storage limit
+      description: Adjusts the maximum number of data entries stored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limit:
+                  type: integer
+                  example: 1000
+      responses:
+        '200':
+          description: Successfully updated storage limit
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+
+  /api/storage/data:
+    get:
+      summary: Retrieve stored power supply data
+      description: Fetches the latest stored power supply data from Redis.
+      parameters:
+        - name: limit
+          in: query
+          description: Number of entries to retrieve
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Successfully retrieved stored data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                example:
+                  - device: "PSU 1"
+                    status: "success"
+                    values:
+                      voltage: 12.0
+                      current: 1.5
+                      power: 18.0
+                      time: "14:26:545537"
+                  - device: "PSU 2"
+                    status: "success"
+                    values:
+                      voltage: 24.0
+                      current: 2.0
+                      power: 48.0
+                      time: "14:27:545537"
+
+  /api/logging:
+    post:
+      summary: Enable or disable logging
+      description: Toggles logging for debugging purposes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                logging:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Successfully updated logging setting
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+
+  /api/get/settings:
+    get:
+      summary: Retrieve system settings
+      description: Fetches the current configuration settings.
+      responses:
+        '200':
+          description: Successfully retrieved settings
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+                  settings:
+                    storageLimit: 1000
+                    storageInterval: 5
+                    storageTask: true
+                    logging: true
+                    fakeValues: false
+                    time: "14:30:123456"
+
+components:
+  schemas:
+    PowerSupplyResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        code:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: Power supply data retrieved successfully
+        time:
+          type: string
+          example: "14:26:54.553537"
+        device:
+          type: string
+          example: fake psu
+        data:
+          type: object
+          properties:
+            readingVoltage:
+              type: number
+              example: 0.8
+            readingCurrent:
+              type: number
+              example: 1
+            voltage:
+              type: number
+              example: 19
+            current:
+              type: number
+              example: 5
+            voltageLimit:
+              type: number
+              example: 30
+            currentLimit:
+              type: number
+              example: 8
+            power:
+              type: number
+              example: 0.8
+            output_status:
+              type: boolean
+              example: true
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        code:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: Invalid request parameters
+        timestamp:
+          type: string
+          example: "2025-03-27T14:30:00.123Z"
+        errors:
+          type: object
+          properties:
+            voltage:
+              type: string
+              example: Value must be between 0 and 30
+            current:
+              type: string
+              example: Value must be a positive number
+

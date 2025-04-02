@@ -1,0 +1,6 @@
+owon-psu
+redis
+orjson
+Flask
+flask-cors
+flask-swagger-ui
